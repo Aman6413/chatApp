@@ -1,4 +1,3 @@
-import React from 'react';
 import assets, { userDummyData } from '../assets/assets.js';
 import { useNavigate } from 'react-router-dom';
 

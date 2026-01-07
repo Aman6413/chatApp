@@ -1,4 +1,3 @@
-import React from "react";
 import assets, { imagesDummyData } from "../assets/assets";
 
 function RightSidebar({ selectedUser }) {
