@@ -3,92 +3,110 @@ import User from "../models/user.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
-// Signup controller
+// Signup
 export const signup = async (req, res) => {
-    try {
-        const { fullName, email, password } = req.body;
+  try {
+    const { fullName, email, password } = req.body;
 
-        if (!fullName || !email || !password) {
-            return res.json({ success: false, error: "All fields are required" });
-        }
-
-        const user = await User.findOne({ email });
-        if (user) return res.json({ error: "User exists" });
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newUser = await new User({
-            fullName,
-            email,
-            password: hashedPassword,
-            bio
-        });
-
-        const token = generateToken(newUser._id);
-
-        res.json({ success: true, userData: newUser, token, message: "User created successfully" });
-    } catch (error) {
-        console.log(error.message);
-        res.json({ success: false, message: error.message });
+    if (!fullName || !email || !password) {
+      return res.json({ success: false, error: "All fields are required" });
     }
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.json({ success: false, error: "User already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await User.create({
+      fullName,
+      email,
+      password: hashedPassword,
+    });
+
+    const token = generateToken(newUser._id);
+
+    const { password: pwd, ...safeUser } = newUser._doc;
+
+    res.json({
+      success: true,
+      userData: safeUser,
+      token,
+      message: "User created successfully",
+    });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
 };
 
-// Login controller
+// Login
 export const login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-        if (!email || !password) {
-            return res.json({ success, error: "All fields are required" });
-        }
-
-        const user = await User.findOne({ email });
-        if (!user) return res.json({ success: false, error: "Invalid credentials" });
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.json({ success: false, error: "Invalid credentials" });
-
-        const token = generateToken(user._id);
-
-        res.json({ success: true, userData: user, token, message: "Login successful" });
-    } catch (error) {
-        console.log(error.message);
-        res.json({ success: false, message: error.message });
+    if (!email || !password) {
+      return res.json({ success: false, error: "All fields are required" });
     }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.json({ success: false, error: "Invalid credentials" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.json({ success: false, error: "Invalid credentials" });
+    }
+
+    const token = generateToken(user._id);
+    const { password: pwd, ...safeUser } = user._doc;
+
+    res.json({
+      success: true,
+      userData: safeUser,
+      token,
+      message: "Login successful",
+    });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
 };
 
-// Controller to check if user is authenticated
+// Check Auth
 export const checkAuth = async (req, res) => {
-    res.json({ success: true, userData: req.user });
+  res.json({ success: true, userData: req.user });
 };
 
-// Controller to update user profile
+// Update Profile
 export const updateProfile = async (req, res) => {
-    try {
-        const { profilePic, fullName, bio } = req.body;
+  try {
+    const { profilePic, fullName, bio } = req.body;
+    const userId = req.user._id;
 
-        const userId = req.user._id;
-        let updateUser;
+    let updatedUser;
 
-        if(!profilePic) {
-            updateUser = await User.findByIdAndUpdate(
-                userId,
-                { fullName, bio },
-                { new: true }
-            );
-        } else {
-            const upload = await cloudinary.uploader.upload(profilePic);
-
-            updateUser = await User.findByIdAndUpdate(
-                userId,
-                { profilePic: upload.secure_url, fullName, bio },
-                { new: true }
-            );
-        }
-
-        res.json({ success: true, userData: updateUser, message: "Profile updated successfully" });
-    } catch (error) {
-        console.log(error.message);
-        res.json({ success: false, message: error.message });
+    if (profilePic) {
+      const upload = await cloudinary.uploader.upload(profilePic);
+      updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { profilePic: upload.secure_url, fullName, bio },
+        { new: true }
+      );
+    } else {
+      updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { fullName, bio },
+        { new: true }
+      );
     }
+
+    res.json({
+      success: true,
+      userData: updatedUser,
+      message: "Profile updated successfully",
+    });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
 };
