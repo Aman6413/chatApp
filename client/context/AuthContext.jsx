@@ -1,3 +1,6 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable no-unused-vars */
 import { createContext, useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -11,7 +14,7 @@ export const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem("token"));
   const [authUser, setAuthUser] = useState(null);
-  const [onlineUser, setOnlineUser] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState([]);
   const [socket, setSocket] = useState(null);
 
   // ✅ SET AUTH HEADER WHEN TOKEN CHANGES
@@ -74,7 +77,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("token");
     setToken(null);
     setAuthUser(null);
-    setOnlineUser([]);
+    setOnlineUsers([]);
 
     if (socket) {
       socket.disconnect();
@@ -111,7 +114,7 @@ export const AuthProvider = ({ children }) => {
     setSocket(newSocket);
 
     newSocket.on("getOnlineUsers", (userIds) => {
-      setOnlineUser(userIds);
+      setOnlineUsers(userIds);
     });
   };
 
@@ -119,8 +122,9 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         authUser,
-        onlineUser,
+        onlineUsers,
         socket,
+        axios,
         login,
         logout,
         updateProfile,

@@ -1,16 +1,31 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import assets from "../assets/assets.js";
+import { AuthContext } from "../../context/AuthContext.jsx";
 
 function ProfilePage() {
+  const { authUser, updateProfile } = useContext(AuthContext);
+
   const [selectedImg, setSelectedImg] = useState(null);
   const navigate = useNavigate();
-  const [name, setName] = useState("Martin Johnson");
-  const [bio, setBio] = useState("Hi there! I'm using ChatApp.");
+  const [name, setName] = useState(authUser.fullName);
+  const [bio, setBio] = useState(authUser.bio);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    navigate("/");
+
+    if(!selectedImg) {
+      await updateProfile({ fullName: name, bio });
+      return navigate("/");
+    }
+
+    const render = new FileReader();
+    render.readAsDataURL(selectedImg);
+    render.onload = async () => {
+      const base64Img = render.result;
+      await updateProfile({ fullName: name, bio, profilePic: base64Img });
+      navigate("/");
+    };
   }
 
   return (
@@ -68,8 +83,8 @@ function ProfilePage() {
         </form>
 
         <img
-          className="max-w-44 aspect-square rounded-full mx-10 max-sm:mt-10"
-          src={assets.logo_icon}
+          className={`max-w-44 aspect-square rounded-full mx-10 max-sm:mt-10 ${selectedImg && "rounded-full"}`}
+          src={ authUser.profilePic || assets.logo_icon }
           alt=""
         />
       </div>
