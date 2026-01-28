@@ -6,35 +6,37 @@ import { connectDB } from "./lib/db.js";
 import userRouter from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
 import { Server } from "socket.io";
+import { handleTyping } from './controllers/messageController.js';
 
 const app = express();
 const server = http.createServer(app);
 
-// Socket.io setup
+// Ensure the socket connection is established before using io
 export const io = new Server(server, {
   cors: {
     origin: "*",
   },
 });
-
 // Store online users (userId -> socketId)
 export const userSocketMap = {};
 
-io.on("connection", (socket) => {
-  const userId = socket.handshake.query.userId;
-  console.log("User connected:", userId);
+io.on('connection', (socket) => {
+    const userId = socket.handshake.query.userId;
+    console.log('User connected:', userId);
 
-  if (userId) {
-    userSocketMap[userId] = socket.id;
-  }
+    if (userId) {
+        socket.userId = userId;
+        userSocketMap[userId] = socket.id;
+        handleTyping(socket);
+    }
 
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
+    io.emit('getOnlineUsers', Object.keys(userSocketMap));
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", userId);
-    delete userSocketMap[userId];
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
-  });
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', userId);
+        delete userSocketMap[userId];
+        io.emit('getOnlineUsers', Object.keys(userSocketMap));
+    });
 });
 
 // Middlewares

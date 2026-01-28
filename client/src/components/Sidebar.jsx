@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import assets from "../assets/assets.js";
+ import assets from "../assets/assets.js";
 import { useNavigate } from "react-router-dom";
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../context/AuthContext.jsx";

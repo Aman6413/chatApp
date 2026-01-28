@@ -7,11 +7,13 @@ import toast from "react-hot-toast";
 
 function ChatContainer() {
   const { messages, selectedUser, setSelectedUser, sendMessage, getMessages } = useContext(ChatContext);
-  const { authUser, onlineUsers } = useContext(AuthContext);
+  const { authUser, onlineUsers, socket } = useContext(AuthContext);
 
   const scrollEnd = useRef();
 
   const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
+  const typingTimeoutRef = useRef(null);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -47,6 +49,32 @@ function ChatContainer() {
       scrollEnd.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  useEffect(() => {
+    socket.on('typing', () => {
+      setTyping(true);
+    });
+
+    socket.on('stopTyping', () => {
+      setTyping(false);
+    });
+
+    return () => {
+      socket.off('typing');
+      socket.off('stopTyping');
+    };
+  }, [socket]);
+
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    socket.emit('typing', { receiverId: selectedUser._id });
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('stopTyping', { receiverId: selectedUser._id });
+    }, 1000);
+  };
 
   return selectedUser ? (
     <div className="h-full overflow-scroll relative backdrop-blur-lg">
@@ -109,12 +137,16 @@ function ChatContainer() {
         ))}
         <div ref={scrollEnd}></div>
       </div>
+      {/* Typing Indicator */}
+      <div className="absolute bottom-16 left-0 right-0 flex items-center justify-center">
+        {typing && <p className="text-gray-400 text-sm">{selectedUser.fullName} is typing...</p>}
+      </div>
       {/* -------- bottom area -------- */}
       <div className="absolute bottom-0 left-0 right-0 flex items-center gap-3 p-3">
         <div className="flex-1 flex items-center bg-gray-100/12 px-3 rounded-full">
           <input
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={(e) => e.key === 'Enter' ? handleSendMessage(e) : null}
             type="text"
             placeholder="Send a message"

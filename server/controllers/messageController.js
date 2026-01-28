@@ -94,3 +94,20 @@ export const sendMessage = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
+// Typing event handler
+export const handleTyping = (socket) => {
+  socket.on("typing", ({ receiverId }) => {
+    const receiverSocketId = userSocketMap[receiverId];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("typing", { userId: socket.userId });
+    }
+  });
+
+  socket.on("stopTyping", ({ receiverId }) => {
+    const receiverSocketId = userSocketMap[receiverId];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("stopTyping", { userId: socket.userId });
+    }
+  });
+};
