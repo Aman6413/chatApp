@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../context/AuthContext.jsx";
 import { ChatContext } from "../../context/ChatContext.jsx";
+import { formatLastSeen } from "../lib/utils.js";
 
 function Sidebar() {
   const { getUsers, users, selectedUser, setSelectedUser, unseenMessages, setUnseenMessages } = useContext(ChatContext);
@@ -89,7 +90,7 @@ group-focus-within:opacity-100
               {onlineUsers.includes(user._id) ? (
                 <span className="text-green-400 text-xs">Online</span>
               ) : (
-                <span className="text-neutral-400 text-xs">Offline</span>
+                <span className="text-neutral-400 text-xs">Last seen {formatLastSeen(user?.lastSeen)}</span>
               )}
             </div>
             {unseenMessages[user._id] > 0 && (

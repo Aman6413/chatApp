@@ -7,6 +7,8 @@ import userRouter from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
 import { Server } from "socket.io";
 import { handleTyping } from './controllers/messageController.js';
+import User from "./models/user.js";
+import Message from "./models/message.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -27,6 +29,28 @@ io.on('connection', (socket) => {
     if (userId) {
         socket.userId = userId;
         userSocketMap[userId] = socket.id;
+        
+        // Mark all pending messages as delivered
+        Message.updateMany(
+            { receiverId: userId, deliveredAt: null },
+            { deliveredAt: new Date() }
+        ).then(result => {
+            if (result.modifiedCount > 0) {
+                // Get all senders of those messages and notify them
+                Message.find({ receiverId: userId, seenAt: null })
+                    .select('senderId')
+                    .distinct('senderId')
+                    .then(senderIds => {
+                        senderIds.forEach(senderId => {
+                            const senderSocketId = userSocketMap[senderId];
+                            if (senderSocketId) {
+                                io.to(senderSocketId).emit("messagesDelivered", { receiverId: userId });
+                            }
+                        });
+                    });
+            }
+        }).catch(err => console.log("Error marking messages as delivered:", err));
+        
         handleTyping(socket);
     }
 
@@ -35,6 +59,12 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('User disconnected:', userId);
         delete userSocketMap[userId];
+        
+        // Update lastSeen in database
+        if (userId) {
+            User.findByIdAndUpdate(userId, { lastSeen: new Date() }).catch(err => console.log("Error updating lastSeen:", err));
+        }
+        
         io.emit('getOnlineUsers', Object.keys(userSocketMap));
     });
 });
